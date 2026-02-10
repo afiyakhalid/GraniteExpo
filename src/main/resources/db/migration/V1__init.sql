@@ -148,7 +148,7 @@ create index if not exists idx_orders_buyer_created on orders(buyer_id, created_
 create index if not exists idx_orders_status_created on orders(status, created_at desc);
 
 -- -----------------------------
--- Order Items
+-- Order Items//stickers
 -- CRITICAL: UNIQUE(block_id) => "one block can be sold once" guarantee.
 -- -----------------------------
 create table if not exists order_items (
