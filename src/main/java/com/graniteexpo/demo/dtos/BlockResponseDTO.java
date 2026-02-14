@@ -7,6 +7,9 @@ public class BlockResponseDTO {
     private UUID id;
     private BlockStatus status;
     private String blockCode;
+    private UUID vendorId;
+    private UUID graniteId;
+    private UUID quarryId;
     private OffsetDateTime reservedUntil;
 
     public BlockResponseDTO() {
@@ -18,6 +21,10 @@ public class BlockResponseDTO {
         this.status = status;
         this.blockCode = blockCode;
         this.reservedUntil = OffsetDateTime.now().plusDays(1);
+        this.vendorId = vendorId;
+        this.graniteId = graniteId;
+        this.quarryId = quarryId;
+
     }
 
     public UUID getId() {
@@ -28,6 +35,14 @@ public class BlockResponseDTO {
         this.id = id;
 
     }
+    public UUID getVendorId() { return vendorId; }
+    public void setVendorId(UUID vendorId) { this.vendorId = vendorId; }
+
+    public UUID getGraniteId() { return graniteId; }
+    public void setGraniteId(UUID graniteId) { this.graniteId = graniteId; }
+
+    public UUID getQuarryId() { return quarryId; }
+    public void setQuarryId(UUID quarryId) { this.quarryId = quarryId; }
     public String getBlockCode(){
         return this.blockCode;
     }

@@ -15,11 +15,16 @@ public class InventoryServiceImpl  implements InventoryService {
     }
 
     @Override
-    public UUID createBlock(String blockCode) {
+    public UUID createBlock(String blockCode, UUID vendorId, UUID graniteId, UUID quarryId) {
         Block b = new Block();
         b.setId(UUID.randomUUID());
         b.setBlockCode(blockCode);
-        b.setStatus(BlockStatus.AVAILABLE);
+
+        b.setVendorId(vendorId);
+        b.setGraniteId(graniteId);
+        b.setQuarryId(quarryId);
+
+        b.setStatus(BlockStatus.available);
         blockrepo.save(b);
         return b.getId();
 

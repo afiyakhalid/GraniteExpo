@@ -19,7 +19,9 @@ private final InventoryService inventoryService;
 
     @PostMapping("/blocks")
     public ResponseEntity<?> createBlock(@Valid @RequestBody CreateBlockRequestDTO dto) {
-        UUID id = inventoryService.createBlock(dto.getBlockCode());
+        UUID id = inventoryService.createBlock(dto.getBlockCode(), dto.getVendorId(),
+                dto.getGraniteId(),
+                dto.getQuarryId());
         return ResponseEntity.ok(Map.of("blockId", id));
     }
 
