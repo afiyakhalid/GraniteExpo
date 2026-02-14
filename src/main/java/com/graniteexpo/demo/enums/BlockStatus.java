@@ -1,4 +1,7 @@
 package com.graniteexpo.demo.enums;
 
-public class BlockStatus {
+public enum BlockStatus {
+    AVAILABLE,
+    RESERVED,
+    SOLD
 }

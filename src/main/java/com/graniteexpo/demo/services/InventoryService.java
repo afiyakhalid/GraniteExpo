@@ -1,4 +1,8 @@
 package com.graniteexpo.demo.services;
 
-public class InventoryService {
+import java.util.UUID;
+
+public interface InventoryService  {
+    UUID createBlock(String blockCode);
+
 }
