@@ -1,4 +1,8 @@
 package com.graniteexpo.demo.enums;
 
-public class OrderStatus {
+public enum OrderStatus {
+    draft,
+            pending_payment,
+            confirmed,
+            cancelled
 }
