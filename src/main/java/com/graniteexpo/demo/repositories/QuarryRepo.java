@@ -1,4 +1,4 @@
 package com.graniteexpo.demo.repositories;
 
-public class QuarrRepo {
+public class QuarryRepo {
 }
