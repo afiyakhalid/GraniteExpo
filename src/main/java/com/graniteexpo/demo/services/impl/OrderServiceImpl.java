@@ -14,7 +14,9 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class OrderServiceImpl implements OrderService {
@@ -102,10 +104,25 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public OrderResponseDTO getOrder(UUID orderId) {
-        return null;
+        Order o= orderRepo.findById(orderId).orElseThrow(() -> new RuntimeException("Order not found"));
+        List<OrderItem> items = orderItemRepository.findByOrderId(orderId);
+        List<UUID> blockIds = items.stream()
+                .map(item -> item.getBlock().getId())
+                .collect(Collectors.toList());
+        return new OrderResponseDTO(
+                o.getId(),
+                o.getOrderNumber(),
+                o.getStatus(),
+
+
+                o.getCreatedAt(),
+                blockIds
+
+        );
     }
 
     @Override
+    @Transactional
     public void confirmOrder(UUID orderId) {
 
     }
