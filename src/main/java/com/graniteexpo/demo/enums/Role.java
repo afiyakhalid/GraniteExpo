@@ -1,4 +1,7 @@
 package com.graniteexpo.demo.enums;
 
-public class Role {
+public enum Role {
+    buyer,
+    vendor,
+    admin
 }

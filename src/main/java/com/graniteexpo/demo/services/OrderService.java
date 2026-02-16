@@ -3,7 +3,7 @@ import com.graniteexpo.demo.dtos.OrderResponseDTO;
 import com.graniteexpo.demo.dtos.OrderResponseDTO;
 import java.util.UUID;
 public interface OrderService {
-    OrderResponseDTO createDraftOrder();
+    OrderResponseDTO createDraftOrder(UUID buyerId);
 
     OrderResponseDTO createOrder(UUID buyerId, UUID blockId);
     void reserveBlock(UUID orderId, UUID blockId);

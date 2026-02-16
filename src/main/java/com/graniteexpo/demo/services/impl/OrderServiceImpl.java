@@ -7,6 +7,7 @@ import com.graniteexpo.demo.repositories.*;
 import com.graniteexpo.demo.services.OrderService;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
@@ -26,7 +27,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public OrderResponseDTO createDraftOrder() {
+    public OrderResponseDTO createDraftOrder(UUID buyerId) {
         Order o = new Order();
         o.setId(UUID.randomUUID());
         o.setOrderNumber("GX-" + System.currentTimeMillis());
@@ -35,7 +36,23 @@ public class OrderServiceImpl implements OrderService {
         orderRepo.save(o);
 
         return new OrderResponseDTO(o.getId(), o.getOrderNumber());
+
+        if (buyerId != null) {
+            User buyer = UserRepo.getReferenceById(buyerId);
+            o.setBuyer(buyer);
+            orderRepo.save(o);
+        }
+        return new OrderResponseDTO(
+                o.getId(),
+                o.getOrderNumber(),
+                o.getStatus(),
+                BigDecimal.ZERO,
+                "USD"
+        );
     }
+
+
+
 
     @Override
     public OrderResponseDTO createOrder(UUID buyerId, UUID blockId) {
