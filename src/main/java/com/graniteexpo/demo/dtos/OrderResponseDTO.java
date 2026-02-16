@@ -15,6 +15,11 @@ public class OrderResponseDTO {
     public OrderResponseDTO(){
 
     }
+    public OrderResponseDTO(UUID orderId, String orderNumber) {
+        this.orderId = orderId;
+        this.orderNumber = orderNumber;
+        // We can leave the others null for now since it's a draft
+    }
     public OrderResponseDTO(UUID orderId, String orderNumber, OrderStatus status, BigDecimal totalAmount, String currency) {
         this.orderId = orderId;
         this.orderNumber = orderNumber;
