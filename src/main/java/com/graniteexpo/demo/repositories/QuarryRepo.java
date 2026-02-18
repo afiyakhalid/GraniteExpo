@@ -1,4 +1,10 @@
 package com.graniteexpo.demo.repositories;
 
-public class QuarryRepo {
-}
+import com.graniteexpo.demo.entities.Quarry;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import java.util.UUID;
+
+@Repository
+public interface QuarryRepo extends JpaRepository<Quarry, UUID> {}
