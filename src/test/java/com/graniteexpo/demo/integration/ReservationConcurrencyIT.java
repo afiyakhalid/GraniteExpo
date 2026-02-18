@@ -40,7 +40,19 @@ public class ReservationConcurrencyIT {
         blockDto.setGraniteId(g.getId());
         blockDto.setQuarryId(q.getId());
 
-        UUID blockId = inventoryService.createBlock(blockDto);
+        UUID blockId = inventoryService.createBlock(blockDto.getBlockCode(), blockDto.getVendorId(), blockDto.getGraniteId(), blockDto.getQuarryId());
     }
+    //creating 20 users now
+    int threadCount = 20;
+    List<UUID> orderIds = new ArrayList<>();
 
+    ExecutorService executor = Executors.newFixedThreadPool(threadCount);
+    List<Future<UUID>> futures = new ArrayList<>();
+
+    for(int i = 0; i < threadCount; i++) {
+        // We pass 'null' for buyerId because your createDraftOrder allows it
+        OrderResponseDTO orderDto = orderService.createDraftOrder(null);
+        orderIds.add(orderDto.getOrderId());
+
+        }
 }

@@ -1,10 +1,8 @@
 package com.graniteexpo.demo.services;
 
-import com.graniteexpo.demo.dtos.CreateBlockRequestDTO;
-
 import java.util.UUID;
 
 public interface InventoryService  {
-    UUID createBlock(CreateBlockRequestDTO dto);
+    UUID createBlock(String blockCode , UUID vendorId, UUID graniteId, UUID quarryId);
 
 }
