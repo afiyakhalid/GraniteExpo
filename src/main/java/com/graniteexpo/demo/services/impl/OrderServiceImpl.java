@@ -8,6 +8,7 @@ import com.graniteexpo.demo.exceptions.ConflictException;
 import com.graniteexpo.demo.exceptions.NotFoundException;
 import com.graniteexpo.demo.repositories.*;
 import com.graniteexpo.demo.services.OrderService;
+import jakarta.persistence.Id;
 import jakarta.transaction.Transactional;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -65,8 +66,12 @@ public class OrderServiceImpl implements OrderService {
 
 
     @Override
+    //create order basically creates an empty cart and dumps the first block in it, then returns the order with the block in it
     public OrderResponseDTO createOrder(UUID buyerId, UUID blockId) {
-        return null;
+        OrderResponseDTO newOrderDto = createDraftOrder(buyerId);
+        reserveBlock(newOrderDto.getOrderId(), blockId);
+
+        return getOrder(newOrderDto.getOrderId());
     }
     @Transactional
     @Override
