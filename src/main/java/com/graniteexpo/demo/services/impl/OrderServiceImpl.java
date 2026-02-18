@@ -5,6 +5,7 @@ import com.graniteexpo.demo.entities.*;
 import com.graniteexpo.demo.enums.BlockStatus;
 import com.graniteexpo.demo.enums.OrderStatus;
 import com.graniteexpo.demo.exceptions.ConflictException;
+import com.graniteexpo.demo.exceptions.NotFoundException;
 import com.graniteexpo.demo.repositories.*;
 import com.graniteexpo.demo.services.OrderService;
 import jakarta.transaction.Transactional;
@@ -99,7 +100,13 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public void removeBlock(UUID orderId, UUID blockId) {
-
+        OrderItem item = orderItemRepository.findByOrderIdAndBlockId(orderId, blockId)
+        .orElseThrow(() -> new NotFoundException("This block is not in this order"));
+        orderItemRepository.delete(item);
+        Block block=item.getBlock();
+        block.setStatus(BlockStatus.available);
+        block.setReservedUntil(null);
+        blockRepo.save(block);
     }
 
     @Override
@@ -124,6 +131,22 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public void confirmOrder(UUID orderId) {
-
+        Order order = orderRepo.findById(orderId).orElseThrow(() -> new RuntimeException("Order not found"));
+        if (order.getStatus() != OrderStatus.draft) {
+            throw new ConflictException("Only draft orders can be confirmed");
+        }
+        List<OrderItem> items = orderItemRepository.findByOrderId(orderId);
+        if (items.isEmpty()) {
+            throw new ConflictException("Cannot confirm an order with no items");
+        }
+        for (OrderItem item : items) {
+            Block block = item.getBlock();
+            block.setStatus(BlockStatus.sold);
+            block.setReservedUntil(null); // No longer needed
+            blockRepo.save(block);
+        }
+        order.setStatus(OrderStatus.confirmed);
+        order.setConfirmedAt(OffsetDateTime.now());
+        orderRepo.save(order);
     }
 }
