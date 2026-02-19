@@ -18,14 +18,21 @@ import java.util.concurrent.*;
 import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest
 public class ReservationConcurrencyIT {
-    @Autowired InventoryService inventoryService;
-    @Autowired OrderService orderService;
-    @Autowired OrderItemRepo orderItemRepository;
+    @Autowired
+    InventoryService inventoryService;
+    @Autowired
+    OrderService orderService;
+    @Autowired
+    OrderItemRepo orderItemRepository;
 
     // Repos needed to create Parent Data safely
-    @Autowired VendorRepo vendorRepo;
-    @Autowired GraniteRepo graniteRepo;
-    @Autowired QuarryRepo quarryRepo;
+    @Autowired
+    VendorRepo vendorRepo;
+    @Autowired
+    GraniteRepo graniteRepo;
+    @Autowired
+    QuarryRepo quarryRepo;
+
     @Test
     void onlyOneReservationWins_AmongMultipleBuyers() throws Exception {
         // --- STEP 1: SAFE DATA SETUP (No Hardcoded IDs!) ---
@@ -41,18 +48,46 @@ public class ReservationConcurrencyIT {
         blockDto.setQuarryId(q.getId());
 
         UUID blockId = inventoryService.createBlock(blockDto.getBlockCode(), blockDto.getVendorId(), blockDto.getGraniteId(), blockDto.getQuarryId());
-    }
-    //creating 20 users now
-    int threadCount = 20;
-    List<UUID> orderIds = new ArrayList<>();
 
-    ExecutorService executor = Executors.newFixedThreadPool(threadCount);
-    List<Future<UUID>> futures = new ArrayList<>();
+        int threadCount = 20;
+        List<UUID> orderIds = new ArrayList<>(threadCount);
 
-    for(int i = 0; i < threadCount; i++) {
-        // We pass 'null' for buyerId because your createDraftOrder allows it
-        OrderResponseDTO orderDto = orderService.createDraftOrder(null);
-        orderIds.add(orderDto.getOrderId());
+        for (int i = 0; i < threadCount; i++) {
 
+            OrderResponseDTO orderDto = orderService.createDraftOrder(null);
+            orderIds.add(orderDto.getOrderId());
         }
+
+
+        ExecutorService pool = Executors.newFixedThreadPool(threadCount);
+        CountDownLatch startGun = new CountDownLatch(1);
+
+        List<Future<Boolean>> results = new ArrayList<>(threadCount);
+        for (int i = 0; i < threadCount; i++) {
+            UUID myOrderId = orderIds.get(i);
+
+            results.add(pool.submit(() -> {
+                startGun.await();
+                try {
+                    orderService.reserveBlock(myOrderId, blockId);
+                    return true;
+                } catch (Exception e) {
+                    return false;
+                }
+            }));
+        }
+
+        startGun.countDown();
+
+        int successCount = 0;
+        for (Future<Boolean> f : results) {
+            if (f.get(10, TimeUnit.SECONDS)) successCount++;
+        }
+
+        pool.shutdownNow();
+
+        // 5) Assertions: only one winner, and DB has exactly one order_item for that block
+        assertThat(successCount).isEqualTo(1);
+        assertThat(orderItemRepository.countByBlockId(blockId)).isEqualTo(1);
+    }
 }
