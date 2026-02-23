@@ -1,5 +1,6 @@
 package com.graniteexpo.demo.controllers;
 
+import com.graniteexpo.demo.dtos.CreateOrderRequestDTO;
 import com.graniteexpo.demo.dtos.OrderResponseDTO;
 import com.graniteexpo.demo.dtos.OrderResponseDTO;
 import com.graniteexpo.demo.dtos.ReserveBlockRequestDTO;
@@ -20,10 +21,16 @@ public class OrderController {
     public OrderController(OrderService orderService) {
         this.orderService = orderService;
     }
-    @PostMapping
-    public ResponseEntity<OrderResponseDTO> createDraft(@PathVariable UUID buyerId) {
-        return ResponseEntity.ok(orderService.createDraftOrder(buyerId));
-    }
+//    @PostMapping
+//    public ResponseEntity<OrderResponseDTO> createDraft(@PathVariable UUID buyerId) {
+//        return ResponseEntity.ok(orderService.createDraftOrder(buyerId));
+//    }
+// Use @RequestBody and your new DTO instead of @PathVariable!
+@PostMapping
+public ResponseEntity<OrderResponseDTO> createDraft(@RequestBody CreateOrderRequestDTO dto) {
+    // Pass the buyerId from the DTO into your service
+    return ResponseEntity.ok(orderService.createDraftOrder(dto.getBuyerId()));
+}
     //add items in the block to the order
     @PostMapping("/{orderId}/items")
     public ResponseEntity<?> reserve(@PathVariable UUID orderId,

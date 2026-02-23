@@ -11,7 +11,6 @@ public interface OrderItemRepo  extends JpaRepository<OrderItem, UUID> {
     long countByBlockId(UUID blockId);
     List<OrderItem> findByOrderId(UUID orderId);
 
-
     Optional<OrderItem> findByOrderIdAndBlockId(UUID orderId, UUID blockId);
 
 

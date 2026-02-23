@@ -2,7 +2,9 @@ package com.graniteexpo.demo.entities;
 
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.CreationTimestamp;
 
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @Entity
@@ -11,19 +13,23 @@ import java.util.UUID;
         @Id
         @GeneratedValue(strategy = GenerationType.UUID)
         private UUID id;
-
+    @Column(nullable = false)
         private String name;
 
         @Column(name = "contact_email")
         private String contactEmail;
 
-        @Column(name = "is_active")
+    @Column(name = "is_active", nullable = false)
         private boolean isActive = true;
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private OffsetDateTime createdAt;
 
         // Constructors
         public Vendor() {}
         public Vendor(UUID id, String name, String contactEmail) {
             this.id = id;
+
             this.name = name;
             this.contactEmail = contactEmail;
         }
