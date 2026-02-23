@@ -1,29 +1,47 @@
 package com.graniteexpo.demo.entities;
 
 import jakarta.persistence.*;
+
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @Entity
 @Table(name = "granites")
 public class Granite {
+
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(columnDefinition = "uuid")
     private UUID id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "vendor_id", nullable = false)
     private Vendor vendor;
 
+    @Column(name = "name", nullable = false)
     private String name;
+
+    @Column(name = "slug", nullable = false, unique = true)
     private String slug;
+
+    @Column(name = "description")
     private String description;
+
+    @Column(name = "created_at", nullable = false)
+    private OffsetDateTime createdAt;
 
     public Granite() {}
 
-    public Granite(UUID uuid, UUID id, String raceGranite, String s) {
+    // optional convenience constructor (works for tests)
+    public Granite(UUID id, Vendor vendor, String name, String slug) {
+        this.id = id;
+        this.vendor = vendor;
+        this.name = name;
+        this.slug = slug;
     }
 
-    // Getters and Setters
+    public Granite(UUID id, UUID id1, String raceGranite, String slug) {
+    }
+
     public UUID getId() { return id; }
     public void setId(UUID id) { this.id = id; }
 
@@ -38,4 +56,7 @@ public class Granite {
 
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
+
+    public OffsetDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(OffsetDateTime createdAt) { this.createdAt = createdAt; }
 }
