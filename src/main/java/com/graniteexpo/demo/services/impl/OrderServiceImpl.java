@@ -8,19 +8,15 @@ import com.graniteexpo.demo.exceptions.ConflictException;
 import com.graniteexpo.demo.exceptions.NotFoundException;
 import com.graniteexpo.demo.repositories.*;
 import com.graniteexpo.demo.services.OrderService;
-import jakarta.persistence.Id;
 import jakarta.transaction.Transactional;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
-import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
-
-import static com.graniteexpo.demo.enums.Role.vendor;
 
 @Service
 public class OrderServiceImpl implements OrderService {
@@ -34,7 +30,7 @@ public class OrderServiceImpl implements OrderService {
 
     public OrderServiceImpl(OrderRepo orderRepository,
                             OrderItemRepo orderItemRepository,
-                            BlockRepo blockRepo, UserRepo userRepo, VendorRepo vendorRepo, VendorRepo vendorRepo1) {
+                            BlockRepo blockRepo, UserRepo userRepo, VendorRepo vendorRepo) {
         this.orderRepo = orderRepository;
         this.orderItemRepository = orderItemRepository;
         this.blockRepo = blockRepo;
@@ -43,7 +39,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public OrderResponseDTO createDraftOrder(UUID buyerId,UUID vendorId) {
+    public OrderResponseDTO createDraftOrder(UUID buyerId, UUID vendorId) {
         Order o = new Order();
         o.setId(UUID.randomUUID());
         o.setOrderNumber("GX-" + System.currentTimeMillis());
@@ -61,14 +57,14 @@ public class OrderServiceImpl implements OrderService {
             throw new IllegalArgumentException("Buyer ID is required to create an order.");
         }
 
-        // 2. SAVE LAST (Once everything is set)
-        orderRepo.save(o);
-        if (vendorId != null) {
-            User vendor = userRepo.getReferenceById(vendorId);
-            o.setVendor(vendor);
-        } else {
-            throw new IllegalArgumentException("Vendor ID is required to start an order.");
-        }
+
+       if (vendorId != null) {
+           Vendor vendor = vendorRepo.getReferenceById(vendorId);
+           o.setVendor(vendor);
+       } else {
+           throw new IllegalArgumentException("Vendor ID is required to start an order.");
+       }
+       orderRepo.save(o);
 
         return new OrderResponseDTO(
                 o.getId(),
@@ -81,10 +77,19 @@ public class OrderServiceImpl implements OrderService {
 
 
 
+
     @Override
     //create order basically creates an empty cart and dumps the first block in it, then returns the order with the block in it
     public OrderResponseDTO createOrder(UUID buyerId, UUID blockId) {
-        OrderResponseDTO newOrderDto = createDraftOrder(buyerId);
+        Block block = blockRepo.findById(blockId)
+                .orElseThrow(() -> new RuntimeException("Block not found"));
+
+        // 2. Extract the vendor (User) from the block
+        UUID vendorId = block.getVendorId(); // or block.getVendor(), depending on your Entity
+        if (vendorId == null) {
+            throw new ConflictException("Block has no owner/vendor");
+        }
+        OrderResponseDTO newOrderDto = createDraftOrder(buyerId,vendorId);
         reserveBlock(newOrderDto.getOrderId(), blockId);
 
         return getOrder(newOrderDto.getOrderId());

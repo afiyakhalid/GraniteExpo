@@ -29,7 +29,7 @@ public class OrderController {
 @PostMapping
 public ResponseEntity<OrderResponseDTO> createDraft(@RequestBody CreateOrderRequestDTO dto) {
     // Pass the buyerId from the DTO into your service
-    return ResponseEntity.ok(orderService.createDraftOrder(dto.getBuyerId()));
+    return ResponseEntity.ok(orderService.createDraftOrder(dto.getBuyerId(),dto.getVendorId()));
 }
     //add items in the block to the order
     @PostMapping("/{orderId}/items")
