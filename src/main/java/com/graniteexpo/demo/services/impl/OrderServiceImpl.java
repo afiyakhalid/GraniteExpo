@@ -20,6 +20,8 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import static com.graniteexpo.demo.enums.Role.vendor;
+
 @Service
 public class OrderServiceImpl implements OrderService {
 
@@ -27,41 +29,55 @@ public class OrderServiceImpl implements OrderService {
     private final OrderItemRepo orderItemRepository;
     private final BlockRepo blockRepo;
     private final UserRepo userRepo;
+    private final VendorRepo vendorRepo;
+
 
     public OrderServiceImpl(OrderRepo orderRepository,
                             OrderItemRepo orderItemRepository,
-                            BlockRepo blockRepo,UserRepo userRepo) {
+                            BlockRepo blockRepo, UserRepo userRepo, VendorRepo vendorRepo, VendorRepo vendorRepo1) {
         this.orderRepo = orderRepository;
         this.orderItemRepository = orderItemRepository;
         this.blockRepo = blockRepo;
         this.userRepo = userRepo;
+        this.vendorRepo = vendorRepo;
     }
 
     @Override
-    public OrderResponseDTO createDraftOrder(UUID buyerId) {
+    public OrderResponseDTO createDraftOrder(UUID buyerId,UUID vendorId) {
         Order o = new Order();
         o.setId(UUID.randomUUID());
         o.setOrderNumber("GX-" + System.currentTimeMillis());
         o.setStatus(OrderStatus.draft);
         o.setCreatedAt(OffsetDateTime.now());
-        orderRepo.save(o);
+
 
 
 
         if (buyerId != null) {
             User buyer = userRepo.getReferenceById(buyerId);
             o.setBuyer(buyer);
-            orderRepo.save(o);
+        } else {
+            // Optional: If your DB requires a buyer, you might want to throw an error here if ID is missing.
+            throw new IllegalArgumentException("Buyer ID is required to create an order.");
         }
+
+        // 2. SAVE LAST (Once everything is set)
+        orderRepo.save(o);
+        if (vendorId != null) {
+            User vendor = userRepo.getReferenceById(vendorId);
+            o.setVendor(vendor);
+        } else {
+            throw new IllegalArgumentException("Vendor ID is required to start an order.");
+        }
+
         return new OrderResponseDTO(
                 o.getId(),
                 o.getOrderNumber(),
                 o.getStatus(),
-                BigDecimal.ZERO,
-                "USD"
+                o.getCreatedAt(), // I noticed your constructor matches getOrder() now
+                List.of() // Empty list of blocks for a new draft
         );
     }
-
 
 
 

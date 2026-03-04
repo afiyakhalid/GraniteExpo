@@ -54,7 +54,7 @@ public class ReservationConcurrencyIT {
 
         for (int i = 0; i < threadCount; i++) {
 
-            OrderResponseDTO orderDto = orderService.createDraftOrder(null);
+            OrderResponseDTO orderDto = orderService.createDraftOrder(UUID.randomUUID());
             orderIds.add(orderDto.getOrderId());
         }
 
