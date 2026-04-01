@@ -100,7 +100,7 @@ public class OrderServiceImpl implements OrderService {
         if (!orderRepo.existsById(orderId)) {
             throw new RuntimeException("Order not found");
         }
-        Block block = blockRepo.findById(blockId).orElseThrow(() -> new RuntimeException("Block not found"));
+        Block block = blockRepo.findByIdForUpdate(blockId).orElseThrow(() -> new RuntimeException("Block not found"));
         if (block.getStatus() != BlockStatus.available)
             throw new ConflictException("Block not available: " + block.getStatus());
 
