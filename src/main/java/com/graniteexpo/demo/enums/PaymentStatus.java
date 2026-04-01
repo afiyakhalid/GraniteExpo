@@ -1,4 +1,7 @@
 package com.graniteexpo.demo.enums;
 
-public class PaymentStatus {
+public enum PaymentStatus {
+    CREATED,
+    SUCCEEDED,
+    FAILED
 }
