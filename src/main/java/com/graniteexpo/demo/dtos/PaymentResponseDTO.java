@@ -21,6 +21,9 @@ public class PaymentResponseDTO {
         this.status = status;
     }
 
+    public PaymentResponseDTO(UUID id, UUID orderId, String provider, String providerReference, BigDecimal amount, String currency, PaymentStatus status) {
+    }
+
     public UUID getPaymentId() { return paymentId; }
     public void setPaymentId(UUID paymentId) { this.paymentId = paymentId; }
 
