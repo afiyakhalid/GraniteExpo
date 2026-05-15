@@ -17,6 +17,8 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import com.graniteexpo.demo.outbox.OutboxService;
+
 
 @Service
 public class OrderServiceImpl implements OrderService {
@@ -26,16 +28,18 @@ public class OrderServiceImpl implements OrderService {
     private final BlockRepo blockRepo;
     private final UserRepo userRepo;
     private final VendorRepo vendorRepo;
+    private final OutboxService outboxService;
 
 
     public OrderServiceImpl(OrderRepo orderRepository,
                             OrderItemRepo orderItemRepository,
-                            BlockRepo blockRepo, UserRepo userRepo, VendorRepo vendorRepo) {
+                            BlockRepo blockRepo, UserRepo userRepo, VendorRepo vendorRepo,OutboxService outboxService) {
         this.orderRepo = orderRepository;
         this.orderItemRepository = orderItemRepository;
         this.blockRepo = blockRepo;
         this.userRepo = userRepo;
         this.vendorRepo = vendorRepo;
+        this.outboxService = outboxService;
     }
 
     @Override
@@ -174,5 +178,15 @@ public class OrderServiceImpl implements OrderService {
         order.setStatus(OrderStatus.confirmed);
         order.setConfirmedAt(OffsetDateTime.now());
         orderRepo.save(order);
+
+        String payload = """
+  {"orderId":"%s","vendorId":"%s","buyerId":"%s"}
+""".formatted(
+                order.getId(),
+                order.getVendor().getId(),
+                order.getBuyer().getId()
+        );
+
+        outboxService.enqueueEvent("order", order.getId(), "OrderConfirmed", payload);
     }
 }

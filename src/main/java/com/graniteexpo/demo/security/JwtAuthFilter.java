@@ -45,19 +45,11 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 String email = claims.get("email", String.class);
                 String role = claims.get("role", String.class);
 
-                // Spring Security uses "authorities" to represent permissions/roles.
-                // Convention: roles are stored as ROLE_<role>
-                // Example: ROLE_admin, ROLE_buyer, ROLE_staff
-                var authorities = List.of(new SimpleGrantedAuthority("ROLE_" + role));
+                var authorities = (role == null || role.isBlank())
+                        ? List.<SimpleGrantedAuthority>of()
+                        : List.of(new SimpleGrantedAuthority("ROLE_" + role));
 
-                // Build an authenticated "principal" object:
-                // - principal: we store email (you could store userId too)
-                // - credentials: null because we already authenticated via token
-                // - authorities: roles
                 var auth = new UsernamePasswordAuthenticationToken(email, null, authorities);
-
-                // Put this into Spring Security context.
-                // After this, Spring considers the request authenticated.
                 SecurityContextHolder.getContext().setAuthentication(auth);
             } catch (Exception e) {
                 // If token is invalid or expired, clear auth.
@@ -67,6 +59,11 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         }
 
         // Always continue the filter chain; authorization is handled later by SecurityConfig rules.
+        String path = request.getServletPath();
+        if (path.startsWith("/api/v1/auth/")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
         filterChain.doFilter(request, response);
     }
 }
