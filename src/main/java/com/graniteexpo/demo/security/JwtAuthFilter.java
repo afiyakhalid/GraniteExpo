@@ -29,41 +29,41 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                                     FilterChain filterChain)
             throws ServletException, IOException {
 
-        // JWT is typically sent in:
-        // Authorization: Bearer <token>
-        String header = request.getHeader("Authorization");
-
-        if (header != null && header.startsWith("Bearer ")) {
-            String token = header.substring("Bearer ".length()).trim();
-
-            try {
-                // Parse token and validate it (signature + expiry).
-                Jws<Claims> parsed = jwtUtil.parse(token);
-                Claims claims = parsed.getBody();
-
-                // Read claims that we put into the token at login/register time.
-                String email = claims.get("email", String.class);
-                String role = claims.get("role", String.class);
-
-                var authorities = (role == null || role.isBlank())
-                        ? List.<SimpleGrantedAuthority>of()
-                        : List.of(new SimpleGrantedAuthority("ROLE_" + role));
-
-                var auth = new UsernamePasswordAuthenticationToken(email, null, authorities);
-                SecurityContextHolder.getContext().setAuthentication(auth);
-            } catch (Exception e) {
-                // If token is invalid or expired, clear auth.
-                // Security will treat the request as unauthenticated and return 401.
-                SecurityContextHolder.clearContext();
-            }
-        }
-
-        // Always continue the filter chain; authorization is handled later by SecurityConfig rules.
+        // 1) Skip auth endpoints completely
         String path = request.getServletPath();
         if (path.startsWith("/api/v1/auth/")) {
             filterChain.doFilter(request, response);
             return;
         }
+
+        // 2) Read Authorization header
+        String header = request.getHeader("Authorization");
+        if (header == null || !header.startsWith("Bearer ")) {
+            // no token -> not authenticated, let Spring decide (will become 401/403 depending config)
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        String token = header.substring("Bearer ".length()).trim();
+
+        try {
+            Jws<Claims> parsed = jwtUtil.parse(token);
+            Claims claims = parsed.getBody();
+
+            String email = claims.get("email", String.class);
+            String role = claims.get("role", String.class);
+
+            var authorities = (role == null || role.isBlank())
+                    ? List.<SimpleGrantedAuthority>of()
+                    : List.of(new SimpleGrantedAuthority("ROLE_" + role));
+
+            var auth = new UsernamePasswordAuthenticationToken(email, null, authorities);
+            SecurityContextHolder.getContext().setAuthentication(auth);
+
+        } catch (Exception e) {
+            SecurityContextHolder.clearContext();
+            // IMPORTANT: don’t block here; just continue and Spring will treat it as unauthenticated
+        }
+
         filterChain.doFilter(request, response);
-    }
-}
+    }}

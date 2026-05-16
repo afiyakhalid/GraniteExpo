@@ -33,15 +33,16 @@ public class AuthServiceImpl implements AuthService {
         });
 
         User u = new User();
-        u.setId(UUID.randomUUID());
+//        u.setId(UUID.randomUUID());
         u.setEmail(dto.getEmail());
+        u.setRole(dto.getRole());
         u.setPasswordHash(passwordEncoder.encode(dto.getPassword()));
         u.setCreatedAt(OffsetDateTime.now());
 
         userRepo.save(u);
 
-        String token = jwtUtil.createToken(u.getId(), u.getEmail());
-        return new AuthResponseDTO(token, u.getId(), u.getEmail());
+        String token = jwtUtil.createToken(u.getId(), u.getEmail(), u.getRole().name());
+        return new AuthResponseDTO(token, u.getId(), u.getEmail(), u.getRole());
     }
 
     @Override
@@ -53,7 +54,7 @@ public class AuthServiceImpl implements AuthService {
             throw new RuntimeException("Invalid credentials");
         }
 
-        String token = jwtUtil.createToken(u.getId(), u.getEmail());
-        return new AuthResponseDTO(token, u.getId(), u.getEmail());
+        String token = jwtUtil.createToken(u.getId(), u.getEmail(), u.getRole().name());
+        return new AuthResponseDTO(token, u.getId(), u.getEmail(), u.getRole());
     }
 }
