@@ -1,0 +1,192 @@
+package com.graniteexpo.demo.services.impl;
+
+import com.graniteexpo.demo.dtos.*;
+import com.graniteexpo.demo.entities.*;
+import com.graniteexpo.demo.enums.BlockStatus;
+import com.graniteexpo.demo.enums.OrderStatus;
+import com.graniteexpo.demo.exceptions.ConflictException;
+import com.graniteexpo.demo.exceptions.NotFoundException;
+import com.graniteexpo.demo.repositories.*;
+import com.graniteexpo.demo.services.OrderService;
+import jakarta.transaction.Transactional;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.stereotype.Service;
+
+import java.time.OffsetDateTime;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
+import com.graniteexpo.demo.outbox.OutboxService;
+
+
+@Service
+public class OrderServiceImpl implements OrderService {
+
+    private final OrderRepo orderRepo;
+    private final OrderItemRepo orderItemRepository;
+    private final BlockRepo blockRepo;
+    private final UserRepo userRepo;
+    private final VendorRepo vendorRepo;
+    private final OutboxService outboxService;
+
+
+    public OrderServiceImpl(OrderRepo orderRepository,
+                            OrderItemRepo orderItemRepository,
+                            BlockRepo blockRepo, UserRepo userRepo, VendorRepo vendorRepo,OutboxService outboxService) {
+        this.orderRepo = orderRepository;
+        this.orderItemRepository = orderItemRepository;
+        this.blockRepo = blockRepo;
+        this.userRepo = userRepo;
+        this.vendorRepo = vendorRepo;
+        this.outboxService = outboxService;
+    }
+
+    @Override
+    public OrderResponseDTO createDraftOrder(UUID buyerId, UUID vendorId) {
+        Order o = new Order();
+        o.setId(UUID.randomUUID());
+        o.setOrderNumber("GX-" + System.currentTimeMillis());
+        o.setStatus(OrderStatus.draft);
+        o.setCreatedAt(OffsetDateTime.now());
+
+
+
+
+        if (buyerId != null) {
+            User buyer = userRepo.getReferenceById(buyerId);
+            o.setBuyer(buyer);
+        } else {
+            // Optional: If your DB requires a buyer, you might want to throw an error here if ID is missing.
+            throw new IllegalArgumentException("Buyer ID is required to create an order.");
+        }
+
+
+       if (vendorId != null) {
+           Vendor vendor = vendorRepo.getReferenceById(vendorId);
+           o.setVendor(vendor);
+       } else {
+           throw new IllegalArgumentException("Vendor ID is required to start an order.");
+       }
+       orderRepo.save(o);
+
+        return new OrderResponseDTO(
+                o.getId(),
+                o.getOrderNumber(),
+                o.getStatus(),
+                o.getCreatedAt(), // I noticed your constructor matches getOrder() now
+                List.of() // Empty list of blocks for a new draft
+        );
+    }
+
+
+
+
+    @Override
+    //create order basically creates an empty cart and dumps the first block in it, then returns the order with the block in it
+    public OrderResponseDTO createOrder(UUID buyerId, UUID blockId) {
+        Block block = blockRepo.findById(blockId)
+                .orElseThrow(() -> new RuntimeException("Block not found"));
+
+        // 2. Extract the vendor (User) from the block
+        UUID vendorId = block.getVendorId(); // or block.getVendor(), depending on your Entity
+        if (vendorId == null) {
+            throw new ConflictException("Block has no owner/vendor");
+        }
+        OrderResponseDTO newOrderDto = createDraftOrder(buyerId,vendorId);
+        reserveBlock(newOrderDto.getOrderId(), blockId);
+
+        return getOrder(newOrderDto.getOrderId());
+    }
+    @Transactional
+    @Override
+    public void reserveBlock(UUID orderId, UUID blockId) {
+        if (!orderRepo.existsById(orderId)) {
+            throw new RuntimeException("Order not found");
+        }
+        Block block = blockRepo.findByIdForUpdate(blockId).orElseThrow(() -> new RuntimeException("Block not found"));
+        if (block.getStatus() != BlockStatus.available)
+            throw new ConflictException("Block not available: " + block.getStatus());
+
+        try {
+            Order orderRef = orderRepo.getReferenceById(orderId);
+
+            OrderItem item = new OrderItem();
+            item.setOrder(orderRef);
+            item.setBlock(block);
+            item.setQuantity(1); // 1 block = 1 item
+
+
+            // SAVE using the standard method
+            orderItemRepository.save(item);
+        } catch (
+                DataIntegrityViolationException e) {
+            throw new ConflictException("Block already reserved/sold (unique constraint hit).");
+        }
+        block.setStatus(BlockStatus.reserved);
+        block.setReservedUntil(OffsetDateTime.now().plus(30, ChronoUnit.MINUTES));
+        blockRepo.save(block);
+    }
+
+    @Override
+    public void removeBlock(UUID orderId, UUID blockId) {
+        OrderItem item = orderItemRepository.findByOrderIdAndBlockId(orderId, blockId)
+        .orElseThrow(() -> new NotFoundException("This block is not in this order"));
+        orderItemRepository.delete(item);
+        Block block=item.getBlock();
+        block.setStatus(BlockStatus.available);
+        block.setReservedUntil(null);
+        blockRepo.save(block);
+    }
+
+    @Override
+    public OrderResponseDTO getOrder(UUID orderId) {
+        Order o= orderRepo.findById(orderId).orElseThrow(() -> new RuntimeException("Order not found"));
+        List<OrderItem> items = orderItemRepository.findByOrderId(orderId);
+        List<UUID> blockIds = items.stream()
+                .map(item -> item.getBlock().getId())
+                .collect(Collectors.toList());
+        return new OrderResponseDTO(
+                o.getId(),
+                o.getOrderNumber(),
+                o.getStatus(),
+
+
+                o.getCreatedAt(),
+                blockIds
+
+        );
+    }
+
+    @Override
+    @Transactional
+    public void confirmOrder(UUID orderId) {
+        Order order = orderRepo.findById(orderId).orElseThrow(() -> new RuntimeException("Order not found"));
+        if (order.getStatus() != OrderStatus.draft) {
+            throw new ConflictException("Only draft orders can be confirmed");
+        }
+        List<OrderItem> items = orderItemRepository.findByOrderId(orderId);
+        if (items.isEmpty()) {
+            throw new ConflictException("Cannot confirm an order with no items");
+        }
+        for (OrderItem item : items) {
+            Block block = item.getBlock();
+            block.setStatus(BlockStatus.sold);
+            block.setReservedUntil(null); // No longer needed
+            blockRepo.save(block);
+        }
+        order.setStatus(OrderStatus.confirmed);
+        order.setConfirmedAt(OffsetDateTime.now());
+        orderRepo.save(order);
+
+        String payload = """
+  {"orderId":"%s","vendorId":"%s","buyerId":"%s"}
+""".formatted(
+                order.getId(),
+                order.getVendor().getId(),
+                order.getBuyer().getId()
+        );
+
+        outboxService.enqueueEvent("order", order.getId(), "OrderConfirmed", payload);
+    }
+}
